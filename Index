@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LIVE Gift Reactor</title>
+
+<style>
+*{box-sizing:border-box}
+
+body{
+ margin:0;
+ background:#080810;
+ color:white;
+ font-family:Arial,sans-serif;
+}
+
+.app{
+ max-width:600px;
+ margin:auto;
+ padding:15px;
+}
+
+h1{
+ text-align:center;
+ color:#ff2b81;
+ margin:5px 0 15px;
+}
+
+.status{
+ text-align:center;
+ background:#171722;
+ padding:12px;
+ border-radius:14px;
+ margin-bottom:10px;
+}
+
+#status{font-weight:bold;color:#ff4444}
+.online{color:#00ff88!important}
+
+.stats{
+ display:grid;
+ grid-template-columns:repeat(3,1fr);
+ gap:8px;
+}
+
+.stat{
+ background:#171722;
+ border-radius:14px;
+ padding:10px;
+ text-align:center;
+}
+
+.stat b{
+ display:block;
+ font-size:25px;
+ color:#00eaff;
+ margin-top:5px;
+}
+
+#stage{
+ height:330px;
+ margin:12px 0;
+ border-radius:22px;
+ position:relative;
+ overflow:hidden;
+ display:flex;
+ justify-content:center;
+ align-items:center;
+ text-align:center;
+ background:radial-gradient(circle,#32115a,#090912 70%);
+ border:2px solid #28283b;
+}
+
+#emoji{
+ font-size:90px;
+}
+
+#message{
+ font-size:25px;
+ font-weight:bold;
+ margin-top:8px;
+}
+
+button{
+ width:100%;
+ border:0;
+ border-radius:14px;
+ padding:16px 8px;
+ margin-top:8px;
+ color:white;
+ font-size:17px;
+ font-weight:bold;
+}
+
+button:active{
+ transform:scale(.96);
+}
+
+.start{background:#00a86b}
+.stop{background:#d52d50}
+.gift{background:#6531d9}
+.special{background:#f15a00}
+.blue{background:#008dcc}
+.gray{background:#333344}
+
+.grid{
+ display:grid;
+ grid-template-columns:1fr 1fr;
+ gap:8px;
+}
+
+.particle{
+ position:absolute;
+ font-size:35px;
+ pointer-events:none;
+ animation:explode 1.2s forwards;
+}
+
+@keyframes explode{
+ from{
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%) scale(.5) rotate(0);
+  opacity:1;
+ }
+ to{
+  left:calc(50% + var(--x));
+  top:calc(50% + var(--y));
+  transform:translate(-50%,-50%) scale(1.4) rotate(360deg);
+  opacity:0;
+ }
+}
+
+.flash{
+ position:absolute;
+ inset:0;
+ background:white;
+ opacity:0;
+ pointer-events:none;
+}
+
+.flash.active{
+ animation:flash .3s;
+}
+
+@keyframes flash{
+ 0%{opacity:.8}
+ 100%{opacity:0}
+}
+
+.shake{
+ animation:shake .35s;
+}
+
+@keyframes shake{
+ 0%,100%{transform:translateX(0)}
+ 25%{transform:translateX(-8px)}
+ 75%{transform:translateX(8px)}
+}
+</style>
+</head>
+
+<body>
+
+<div class="app">
+
+<h1>🔥 LIVE GIFT REACTOR</h1>
+
+<div class="status">
+ Статус:
+ <span id="status">OFFLINE</span>
+</div>
+
+<div class="stats">
+
+<div class="stat">
+ GIFTS
+ <b id="gifts">0</b>
+</div>
+
+<div class="stat">
+ COMBO
+ <b id="combo">0</b>
+</div>
+
+<div class="stat">
+ POINTS
+ <b id="points">0</b>
+</div>
+
+</div>
+
+<div id="stage">
+
+<div class="flash" id="flash"></div>
+
+<div>
+<div id="emoji">🎁</div>
+<div id="message">НАТИСНИ START</div>
+</div>
+
+</div>
+
+<div class="grid">
+
+<button class="start" onclick="startBot()">▶ START</button>
+
+<button class="stop" onclick="stopBot()">■ STOP</button>
+
+<button class="gift" onclick="gift('🌹','РОЗА!','pink',1)">
+🌹 ROSE
+</button>
+
+<button class="gift" onclick="gift('❤️','СЪРЦЕ!','red',5)">
+❤️ HEART
+</button>
+
+<button class="gift" onclick="gift('🔥','СТАНА ГОРЕЩО!','orange',10)">
+🔥 FIRE
+</button>
+
+<button class="gift" onclick="gift('🌌','GALAXY MODE!','purple',50)">
+🌌 GALAXY
+</button>
+
+<button class="gift" onclick="gift('🦁','ЛЪВЪТ ВЛЕЗЕ!','gold',100)">
+🦁 LION
+</button>
+
+<button class="gift" onclick="gift('💎','ДИАМАНТ!','cyan',150)">
+💎 DIAMOND
+</button>
+
+<button class="special" onclick="randomGift()">
+🎲 RANDOM
+</button>
+
+<button class="special" onclick="megaCombo()">
+💥 MEGA COMBO
+</button>
+
+<button class="blue" onclick="goFullscreen()">
+⛶ FULLSCREEN
+</button>
+
+<button class="gray" onclick="resetStats()">
+♻ RESET
+</button>
+
+</div>
+
+</div>
+
+<script>
+
+let running=false;
+let gifts=0;
+let combo=0;
+let points=0;
+let comboTimeout;
+
+const statusEl=document.getElementById("status");
+const giftsEl=document.getElementById("gifts");
+const comboEl=document.getElementById("combo");
+const pointsEl=document.getElementById("points");
+const emojiEl=document.getElementById("emoji");
+const messageEl=document.getElementById("message");
+const stage=document.getElementById("stage");
+const flash=document.getElementById("flash");
+
+function startBot(){
+
+ running=true;
+
+ statusEl.textContent="ONLINE";
+ statusEl.classList.add("online");
+
+ react("🚀","БОТЪТ Е АКТИВЕН!","#00ff88");
+
+}
+
+function stopBot(){
+
+ running=false;
+
+ statusEl.textContent="OFFLINE";
+ statusEl.classList.remove("online");
+
+ react("⛔","БОТЪТ Е СПРЯН!","#ff4444");
+
+}
+
+function gift(emoji,text,color,value){
+
+ if(!running){
+
+  react("⚠️","ПЪРВО НАТИСНИ START!","#ffcc00");
+
+  return;
+ }
+
+ gifts++;
+ combo++;
+ points+=value;
+
+ giftsEl.textContent=gifts;
+ comboEl.textContent=combo;
+ pointsEl.textContent=points;
+
+ react(emoji,text,getColor(color));
+
+ explode(emoji);
+
+ clearTimeout(comboTimeout);
+
+ comboTimeout=setTimeout(()=>{
+
+  combo=0;
+  comboEl.textContent=0;
+
+ },3000);
+
+}
+
+function randomGift(){
+
+ const list=[
+  ["🌹","РОЗА!","pink",1],
+  ["❤️","СЪРЦЕ!","red",5],
+  ["🔥","СТАНА ГОРЕЩО!","orange",10],
+  ["🌌","GALAXY MODE!","purple",50],
+  ["🦁","ЛЪВЪТ ВЛЕЗЕ!","gold",100],
+  ["💎","ДИАМАНТ!","cyan",150]
+ ];
+
+ const r=list[Math.floor(Math.random()*list.length)];
+
+ gift(...r);
+
+}
+
+function megaCombo(){
+
+ if(!running){
+
+  react("⚠️","ПЪРВО START!","#ffcc00");
+
+  return;
+ }
+
+ let count=0;
+
+ const timer=setInterval(()=>{
+
+  randomGift();
+
+  count++;
+
+  if(count>=10){
+   clearInterval(timer);
+  }
+
+ },180);
+
+}
+
+function react(emoji,text,color){
+
+ emojiEl.textContent=emoji;
+ messageEl.textContent=text;
+ messageEl.style.color=color;
+
+ stage.classList.remove("shake");
+ void stage.offsetWidth;
+ stage.classList.add("shake");
+
+ flash.classList.remove("active");
+ void flash.offsetWidth;
+ flash.classList.add("active");
+
+}
+
+function explode(emoji){
+
+ for(let i=0;i<20;i++){
+
+  const p=document.createElement("div");
+
+  p.className="particle";
+  p.textContent=emoji;
+
+  p.style.setProperty(
+   "--x",
+   (Math.random()*500-250)+"px"
+  );
+
+  p.style.setProperty(
+   "--y",
+   (Math.random()*350-175)+"px"
+  );
+
+  stage.appendChild(p);
+
+  setTimeout(()=>{
+   p.remove();
+  },1200);
+
+ }
+
+}
+
+function getColor(name){
+
+ const colors={
+  pink:"#ff3b81",
+  red:"#ff1744",
+  orange:"#ff6500",
+  purple:"#b14cff",
+  gold:"#ffc400",
+  cyan:"#00eaff"
+ };
+
+ return colors[name]||"#fff";
+
+}
+
+function resetStats(){
+
+ gifts=0;
+ combo=0;
+ points=0;
+
+ giftsEl.textContent="0";
+ comboEl.textContent="0";
+ pointsEl.textContent="0";
+
+ react("♻️","СТАТИСТИКАТА Е НУЛИРАНА!","#00eaff");
+
+}
+
+function goFullscreen(){
+
+ if(document.documentElement.requestFullscreen){
+
+  document.documentElement.requestFullscreen();
+
+ }else{
+
+  alert("Fullscreen не се поддържа от този браузър.");
+
+ }
+
+}
+
+</script>
+
+</body>
+</html>
